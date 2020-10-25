@@ -1,0 +1,1 @@
+CleanArchitectureに基づいてS3にファイルアップロードするバッチを開発する
