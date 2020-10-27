@@ -1,17 +1,16 @@
 package main
 
 import (
-	"bytes"
-	"context"
+	"flag"
 	"fmt"
 	"html/template"
 	"io"
 	"net/http"
 	"os"
 
-	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/NguyenThanhTuan1234/S3UploadFile/config"
+	"github.com/NguyenThanhTuan1234/S3UploadFile/s3client"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/aws/aws-sdk-go/aws"
 )
 
 var tpl *template.Template
@@ -22,6 +21,7 @@ func init() {
 }
 
 func main() {
+
 	http.HandleFunc("/", index)
 	http.Handle("/favicon.ico", http.NotFoundHandler())
 	http.ListenAndServe(":8080", nil)
@@ -44,18 +44,18 @@ func index(w http.ResponseWriter, r *http.Request) {
 		fileInfo, _ := nf.Stat()
 		size := fileInfo.Size()
 		buffer := make([]byte, size)
-		fileBytes := bytes.NewReader(buffer)
-		cfg, err := config.LoadDefaultConfig()
+		profile := flag.String("profile", "", "Enter AWS Profile")
+		bucket := flag.String("bucket", "", "Enter bucket name")
+		flag.Parse()
+		awsConfigProvider := config.AWSConfigProvider{
+			Profile: *profile,
+		}
+		awsConfig, err := awsConfigProvider.LoadAWSConfig()
 		if err != nil {
-			panic(err)
+			fmt.Println(err)
 		}
-		svcS3 = s3.NewFromConfig(cfg)
-		putObjectInput := s3.PutObjectInput{
-			Bucket: aws.String("s3testtuan1"),
-			Key:    aws.String(nf.Name()),
-			Body:   fileBytes,
-		}
-		_, err = svcS3.PutObject(context.Background(), &putObjectInput)
+		putObject := s3client.S3New(awsConfig)
+		err = putObject.Upload(buffer, nf.Name(), *bucket)
 		if err != nil {
 			fmt.Println(err)
 		}
